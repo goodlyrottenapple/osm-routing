@@ -1,0 +1,115 @@
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+import org.w3c.dom.Element;
+
+public class Parser {
+    private Map<Long, MapNode> mapNodeMap = new HashMap<Long, MapNode>();
+    private List<MapWay> mapWayList = new ArrayList<MapWay>();
+	
+  public void parse() throws Exception {
+    //Get the DOM Builder Factory
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+    //Get the DOM Builder
+    DocumentBuilder builder = factory.newDocumentBuilder();
+
+    //Load and Parse the XML document
+    //document contains the complete XML as a Tree.
+    Document document = builder.parse( ClassLoader.getSystemResourceAsStream("xml/map.xml"));
+
+    
+	
+    //Iterating through the nodes and extracting the data.
+    NodeList nodeList = document.getDocumentElement().getChildNodes();
+
+    for (int i = 0; i < nodeList.getLength(); i++) {
+
+      //We have encountered an <employee> tag.
+      Node node = nodeList.item(i);
+      if (node instanceof Element && node.getNodeName().equals("node")) {
+        MapNode mnode = new MapNode();
+        mnode.id = Long.parseLong( node.getAttributes().getNamedItem("id").getNodeValue() );
+        mnode.lat = Float.parseFloat( node.getAttributes().getNamedItem("lat").getNodeValue() );
+        mnode.lon = Float.parseFloat( node.getAttributes().getNamedItem("lon").getNodeValue() );
+		
+        mapNodeMap.put(mnode.id, mnode);
+      }
+	  
+      if (node instanceof Element && node.getNodeName().equals("way")) {
+        MapWay mway = new MapWay();
+        mway.id = Long.parseLong( node.getAttributes().getNamedItem("id").getNodeValue() );
+        boolean add = false;
+		NodeList childNodes = node.getChildNodes();
+        for (int j = 0; j < childNodes.getLength(); j++) {
+          Node cNode = childNodes.item(j);
+		  if( cNode.getNodeName().equals("nd") ) {
+			  long id = Long.parseLong( cNode.getAttributes().getNamedItem("ref").getNodeValue() );
+			  mway.nodes.add( mapNodeMap.get(id) );
+		  }
+		  if( cNode.getNodeName().equals("tag")
+			&& cNode.getAttributes().getNamedItem("k").getNodeValue().equals("highway")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("footway")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("path")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("service")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("pedestrian")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("steps")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("cycleway")
+			&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("bridleway")
+			//&& !cNode.getAttributes().getNamedItem("v").getNodeValue().equals("unclassified")
+				   ) add = true;//mapWayList.add(mway);
+		  if( cNode.getNodeName().equals("tag")
+			&& cNode.getAttributes().getNamedItem("k").getNodeValue().equals("oneway")
+			&& cNode.getAttributes().getNamedItem("v").getNodeValue().equals("yes") ) mway.oneway = true;
+        }
+		if(add) mapWayList.add(mway);
+      }
+	  
+    }
+	
+	//return Grapher.reduce(mapWayList, mapNodeMap);
+
+  }
+  
+  public Map<Long, MapNode> getNodes(){
+  	return mapNodeMap;
+  }
+
+  public List<MapWay> getWays(){
+  	return mapWayList;
+  }
+}
+class MapNode{
+  long id;
+  double lat, lon;
+  public MapNode(int id, double lat, double lon){
+	  this.id = id;
+	  this.lat = lat;
+	  this.lon = lon;
+  }
+  @Override
+  public String toString() {
+    return id+" "+"("+lat+","+lon+")";
+  }
+}
+
+class MapWay{
+  long id;
+  List<MapNode> nodes = new ArrayList<MapNode>();
+  boolean oneWay = false;
+  
+  @Override
+  public String toString() {
+	  String ret = id+"'s nodes:\n";
+	  for (MapNode m : nodes){
+		  ret += m + "\n";
+	  }
+    return ret;
+  }
+}

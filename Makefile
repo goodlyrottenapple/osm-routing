@@ -1,6 +1,6 @@
 SHELL=bash
 
-map = "/Users/goodlyrottenapple/Downloads/uk.osm"
+map = "path-to-osm-file"
 
 classes: FORCE
 	rm -rf bin
